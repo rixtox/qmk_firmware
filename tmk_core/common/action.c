@@ -60,7 +60,32 @@ void process_action(keyrecord_t *record)
     uint8_t tap_count = record->tap.count;
 #endif
 
-    if (IS_NOEVENT(event)) { return; }
+    if (IS_NOEVENT(event)) {
+        extern int trigger_keys_enabled;
+        static const int key_count = 2;
+        static const int key_codes[] = {KC_Z, KC_X};
+        static int key_states[] = {0, 0};
+        static int current_key = -1;
+        if (trigger_keys_enabled) {
+            if (++current_key >= key_count)
+                current_key = 0;
+            key_states[current_key] = !key_states[current_key];
+            if (key_states[current_key]) {
+                register_code(key_codes[current_key]);
+            } else {
+                unregister_code(key_codes[current_key]);
+            }
+        } else {
+            if (current_key >= 0) {
+                current_key = -1;
+                int i;
+                for (i = 0; i < key_count; i++) {
+                    unregister_code(key_codes[i]);
+                }
+            }
+        }
+        return;
+    }
 
     action_t action = layer_switch_get_action(event.key);
     dprint("ACTION: "); debug_action(action);

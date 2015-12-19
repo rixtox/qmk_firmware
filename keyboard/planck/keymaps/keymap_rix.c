@@ -27,8 +27,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 },
 [OSU] = { /* osu! */
   {KC_ESC,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_BSPC},
-  {KC_TAB,  KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT},
-  {M(0),    KC_Z,    KC_X,    KC_Z,    KC_C,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_UP  , KC_ENT },
+  {M(2),    KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT},
+  {M(0),    M(1),    M(1),    M(1),    KC_C,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_UP  , KC_ENT },
   {KC_NO,   KC_NO,   KC_NO,   KC_SPC , KC_SPC , KC_SPC,  KC_SPC,  MO(_RS), KC_NO,   KC_LEFT, KC_DOWN, KC_RGHT}
 },
 [_NB] = { /* NUMBERS */
@@ -56,18 +56,70 @@ const uint16_t PROGMEM fn_actions[] = {
 };
 
 int trigger_keys_enabled = 0;
+int trigger_once_enabled = 0;
+
+const int key_count = 2;
+const int key_codes[] = {KC_Z, KC_X};
+int current_key = -1;
+
+void trigger_key() {
+  int previous_key = current_key;
+  if (++current_key >= key_count)
+    current_key = 0;
+  register_code(key_codes[current_key]);
+  if (previous_key >= 0) {
+    unregister_code(key_codes[previous_key]);
+  }
+}
+
+void clear_trigger_keys() {
+  if (current_key >= 0) {
+    unregister_code(key_codes[current_key]);
+    current_key = -1;
+  }
+}
+
+void trigger_loop() {
+  if (trigger_keys_enabled) {
+    if (!trigger_once_enabled)
+      trigger_key();
+  } else if (!trigger_once_enabled)
+    clear_trigger_keys();
+}
 
 const macro_t *action_get_macro(keyrecord_t *record, uint8_t id, uint8_t opt)
 {
   // MACRODOWN only works in this function
-      switch(id) {
-        case 0:
-          if (record->event.pressed) {
-            trigger_keys_enabled = 1;
-          } else {
-            trigger_keys_enabled = 0;
-          }
-        break;
+  switch(id) {
+    case 0:
+      if (record->event.pressed) {
+        trigger_keys_enabled = 1;
+      } else {
+        trigger_keys_enabled = 0;
       }
-    return MACRO_NONE;
+      break;
+    case 1:
+      if (record->event.pressed) {
+        trigger_once_enabled++;
+        trigger_key();
+      } else {
+        trigger_once_enabled--;
+        if (!trigger_once_enabled)
+          clear_trigger_keys();
+      }
+      break;
+    case 2:
+      if (record->event.pressed) {
+        register_code(KC_SLSH);
+        unregister_code(KC_SLSH);
+        register_code(KC_N);
+        unregister_code(KC_N);
+        register_code(KC_P);
+        unregister_code(KC_P);
+        register_code(KC_ENT);
+        unregister_code(KC_ENT);
+      }
+      break;
+  }
+  return MACRO_NONE;
 };
